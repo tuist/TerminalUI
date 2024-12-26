@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 public struct WarningAlert: ExpressibleByStringLiteral, Equatable {
     let message: TerminalText
@@ -68,12 +69,13 @@ public protocol Noorable {
     ///   - description: Use it to add some explanation to what the question is for.
     ///   - collapseOnSelection: Whether the prompt should collapse after the user selects an option.
     /// - Returns: The option selected by the user.
-    func singleChoicePrompt<T: Equatable & CustomStringConvertible>(
+    func singleChoicePrompt<T: CaseIterable & CustomStringConvertible & Equatable>(
         title: TerminalText?,
         question: TerminalText,
         options: [T],
         description: TerminalText?,
-        collapseOnSelection: Bool
+        collapseOnSelection: Bool,
+        logger: Logger?
     ) -> T
 
     /// It shows multiple options to the user to select one.
@@ -87,7 +89,8 @@ public protocol Noorable {
         title: TerminalText?,
         question: TerminalText,
         description: TerminalText?,
-        collapseOnSelection: Bool
+        collapseOnSelection: Bool,
+        logger: Logger?
     ) -> T
 
     /// It shows a component to answer yes or no to a question.
@@ -103,7 +106,8 @@ public protocol Noorable {
         question: TerminalText,
         defaultAnswer: Bool,
         description: TerminalText?,
-        collapseOnSelection: Bool
+        collapseOnSelection: Bool,
+        logger: Logger?
     ) -> Bool
 
     /// It prompts the user for some information.
@@ -123,17 +127,17 @@ public protocol Noorable {
     /// It shows a success alert.
     /// - Parameters:
     ///   - alert: The success message
-    func success(_ alert: SuccessAlert)
+    func success(_ alert: SuccessAlert, logger: Logger?)
 
     /// It shows an error alert.
     /// - Parameters:
     ///   - alert: The error message
-    func error(_ alert: ErrorAlert)
+    func error(_ alert: ErrorAlert, logger: Logger?)
 
     /// It shows a warning alert.
     /// - Parameters:
     ///   - alerts: The warning messages.
-    func warning(_ alerts: WarningAlert...)
+    func warning(_ alerts: WarningAlert..., logger: Logger?)
 
     /// It shows a warning alert.
     /// - Parameters:
@@ -193,7 +197,8 @@ public class Noora: Noorable {
         question: TerminalText,
         options: [T],
         description: TerminalText?,
-        collapseOnSelection: Bool
+        collapseOnSelection: Bool,
+        logger: Logger?
     ) -> T where T: CustomStringConvertible, T: Equatable {
         let component = SingleChoicePrompt(
             title: title,
@@ -204,7 +209,8 @@ public class Noora: Noorable {
             collapseOnSelection: collapseOnSelection,
             renderer: Renderer(),
             standardPipelines: StandardPipelines(),
-            keyStrokeListener: KeyStrokeListener()
+            keyStrokeListener: KeyStrokeListener(),
+            logger: logger
         )
         return component.run(options: options)
     }
@@ -213,7 +219,8 @@ public class Noora: Noorable {
         title: TerminalText? = nil,
         question: TerminalText,
         description: TerminalText? = nil,
-        collapseOnSelection: Bool = true
+        collapseOnSelection: Bool = true,
+        logger: Logger?
     ) -> T {
         let component = SingleChoicePrompt(
             title: title,
@@ -225,7 +232,9 @@ public class Noora: Noorable {
             renderer: Renderer(),
             standardPipelines: standardPipelines,
             keyStrokeListener: KeyStrokeListener()
+            logger: logger
         )
+        logger?.info("Prompted the user to select a single choice option for the question '\(question.formatted(theme: theme, terminal: terminal))'")
         return component.run()
     }
 
@@ -233,7 +242,8 @@ public class Noora: Noorable {
         title: TerminalText?,
         prompt: TerminalText,
         description: TerminalText?,
-        collapseOnAnswer: Bool
+        collapseOnAnswer: Bool,
+        logger: Logger?
     ) -> String {
         let component = TextPrompt(
             title: title,
@@ -243,7 +253,8 @@ public class Noora: Noorable {
             terminal: terminal,
             collapseOnAnswer: collapseOnAnswer,
             renderer: Renderer(),
-            standardPipelines: StandardPipelines()
+            standardPipelines: StandardPipelines(),
+            logger: logger
         )
         return component.run()
     }
@@ -253,9 +264,12 @@ public class Noora: Noorable {
         question: TerminalText,
         defaultAnswer: Bool = true,
         description: TerminalText? = nil,
-        collapseOnSelection: Bool
+        collapseOnSelection: Bool,
+        logger: Logger?
     ) -> Bool {
-        YesOrNoChoicePrompt(
+        logger?.info("Prompted the user to select a YesOrNo choice for the question '\(question.formatted(theme: theme, terminal: terminal))'")
+        
+        return YesOrNoChoicePrompt(
             title: title,
             question: question,
             description: description,
@@ -265,29 +279,39 @@ public class Noora: Noorable {
             renderer: Renderer(),
             standardPipelines: standardPipelines,
             keyStrokeListener: KeyStrokeListener(),
-            defaultAnswer: defaultAnswer
+            defaultAnswer: defaultAnswer,
+            logger: logger
         ).run()
     }
 
-    public func success(_ alert: SuccessAlert) {
-        Alert(
+    public func success(_ alert: SuccessAlert, logger: Logger?) {
+        logger?.info("Prompted a success alert with message '\(alert.message.formatted(theme: theme, terminal: terminal))' with nextSteps")
+        return Alert(
             item: .success(alert.message, nextSteps: alert.nextSteps),
             standardPipelines: standardPipelines,
             terminal: terminal,
-            theme: theme
+            theme: theme,
+            logger: logger
         ).run()
     }
 
-    public func error(_ alert: ErrorAlert) {
-        Alert(
+    public func error(_ alert: ErrorAlert, logger: Logger?) {
+        logger?.info("Prompted an error alert with message '\(alert.message.formatted(theme: theme, terminal: terminal))' with nextSteps")
+        return Alert(
             item: .error(alert.message, nextSteps: alert.nextSteps),
             standardPipelines: standardPipelines,
             terminal: terminal,
-            theme: theme
+            theme: theme,
+            logger: logger
         ).run()
     }
 
-    public func warning(_ alerts: WarningAlert...) {
+    public func warning(_ alerts: WarningAlert..., logger: Logger?) {
+            if let logger {
+              _ = alerts.map {
+                logger.info("Prompted a warning alert with message '\($0.message.formatted(theme: theme, terminal: terminal))' with nextSteps")
+            }
+        }
         warning(alerts)
     }
 
@@ -296,7 +320,8 @@ public class Noora: Noorable {
             item: .warning(alerts.map { (message: $0.message, nextStep: $0.nextStep) }),
             standardPipelines: standardPipelines,
             terminal: terminal,
-            theme: theme
+            theme: theme,
+            logger: logger
         ).run()
     }
 

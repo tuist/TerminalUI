@@ -1,5 +1,6 @@
 import Foundation
 import Rainbow
+import os
 
 struct SingleChoicePrompt {
     // MARK: - Attributes
@@ -13,6 +14,7 @@ struct SingleChoicePrompt {
     let renderer: Rendering
     let standardPipelines: StandardPipelines
     let keyStrokeListener: KeyStrokeListening
+    let logger: Logger?
 
     func run<T: CustomStringConvertible & Equatable>(options: [T]) -> T {
         run(options: options.map { ($0, $0.description) })
@@ -56,6 +58,7 @@ struct SingleChoicePrompt {
             renderResult(selectedOption: selectedOption)
         }
 
+        logger?.info("Option '\(selectedOption.0)' selected for the question '\(question.formatted(theme: theme, terminal: terminal))'")
         return selectedOption.0
     }
 
@@ -97,6 +100,7 @@ struct SingleChoicePrompt {
                 "\n\(titleOffset)\(description.formatted(theme: theme, terminal: terminal).hexIfColoredTerminal(theme.muted, terminal))"
         }
         content += "\n\(questions)"
+        logger?.info("rendered options '\(questions)' for '\(question.formatted(theme: theme, terminal: terminal))'")
         content += "\n\(titleOffset)\("↑/↓/k/j up/down • enter confirm".hexIfColoredTerminal(theme.muted, terminal))"
         renderer.render(content, standardPipeline: standardPipelines.output)
     }

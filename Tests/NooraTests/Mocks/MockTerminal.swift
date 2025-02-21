@@ -3,6 +3,7 @@ import Noora
 class MockTerminal: Terminaling {
     var isInteractive: Bool = true
     var isColored: Bool = true
+    var size: (rows: Int, columns: Int)? = nil
 
     init(
         isInteractive: Bool = true,

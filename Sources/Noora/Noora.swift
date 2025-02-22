@@ -84,6 +84,7 @@ public protocol Noorable {
     ///   - question: The quetion to ask to the user.
     ///   - description: Use it to add some explanation to what the question is for.
     ///   - collapseOnSelection: Whether the prompt should collapse after the user selects an option.
+    ///   - logger: Use it to get debug logs.
     /// - Returns: The option selected by the user.
     func singleChoicePrompt<T: CaseIterable & CustomStringConvertible & Equatable>(
         title: TerminalText?,
@@ -100,6 +101,7 @@ public protocol Noorable {
     ///   - defaultAnswer: Whether the default selected answer is yes or no (true or false)
     ///   - description: An optional description to add additional context around what the question is for.
     ///   - collapseOnSelection: When true, the question is collapsed after the question is entered.
+    ///   - logger: Use it to get debug logs.
     /// - Returns: The option selected by the user.
     func yesOrNoChoicePrompt(
         title: TerminalText?,
@@ -126,17 +128,20 @@ public protocol Noorable {
 
     /// It shows a success alert.
     /// - Parameters:
-    ///   - alert: The success message
+    ///   - alert: The success message.
+    ///   - logger: Use it to get debug logs.
     func success(_ alert: SuccessAlert, logger: Logger?)
 
     /// It shows an error alert.
     /// - Parameters:
-    ///   - alert: The error message
+    ///   - alert: The error message.
+    ///   - logger: Use it to get debug logs.
     func error(_ alert: ErrorAlert, logger: Logger?)
 
     /// It shows a warning alert.
     /// - Parameters:
     ///   - alerts: The warning messages.
+    ///   - logger: Use it to get debug logs.
     func warning(_ alerts: WarningAlert..., logger: Logger?)
 
     /// It shows a warning alert.
@@ -234,7 +239,7 @@ public class Noora: Noorable {
             keyStrokeListener: KeyStrokeListener()
             logger: logger
         )
-        logger?.info("Prompted the user to select a single choice option for the question '\(question.formatted(theme: theme, terminal: terminal))'")
+        logger?.trace("Prompted the user to select a single choice option for the question '\(question.formatted(theme: theme, terminal: terminal))'")
         return component.run()
     }
 
@@ -267,7 +272,7 @@ public class Noora: Noorable {
         collapseOnSelection: Bool,
         logger: Logger?
     ) -> Bool {
-        logger?.info("Prompted the user to select a YesOrNo choice for the question '\(question.formatted(theme: theme, terminal: terminal))'")
+        logger?.trace("Prompted the user to select a YesOrNo choice for the question '\(question.formatted(theme: theme, terminal: terminal))'")
         
         return YesOrNoChoicePrompt(
             title: title,
@@ -285,7 +290,7 @@ public class Noora: Noorable {
     }
 
     public func success(_ alert: SuccessAlert, logger: Logger?) {
-        logger?.info("Prompted a success alert with message '\(alert.message.formatted(theme: theme, terminal: terminal))' with nextSteps")
+        logger?.notice("Prompted a success alert with message '\(alert.message.formatted(theme: theme, terminal: terminal))' with nextSteps")
         return Alert(
             item: .success(alert.message, nextSteps: alert.nextSteps),
             standardPipelines: standardPipelines,
@@ -296,7 +301,7 @@ public class Noora: Noorable {
     }
 
     public func error(_ alert: ErrorAlert, logger: Logger?) {
-        logger?.info("Prompted an error alert with message '\(alert.message.formatted(theme: theme, terminal: terminal))' with nextSteps")
+        logger?.error("Prompted an error alert with message '\(alert.message.formatted(theme: theme, terminal: terminal))' with nextSteps")
         return Alert(
             item: .error(alert.message, nextSteps: alert.nextSteps),
             standardPipelines: standardPipelines,

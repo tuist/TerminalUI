@@ -14,13 +14,13 @@ struct SingleChoicePromptTests {
         }
     }
 
+    let logger = MockLogger()
     let renderer = MockRenderer()
     let terminal = MockTerminal()
     let keyStrokeListener = MockKeyStrokeListener()
 
     @Test func renders_the_right_content() throws {
         // Given
-        let logger: FakeLogger()
         let subject = SingleChoicePrompt(
             title: "Integration",
             question: "How would you like to integrate Tuist?",
@@ -84,7 +84,8 @@ struct SingleChoicePromptTests {
             collapseOnSelection: true,
             renderer: renderer,
             standardPipelines: StandardPipelines(),
-            keyStrokeListener: keyStrokeListener
+            keyStrokeListener: keyStrokeListener,
+            logger: logger
         )
         keyStrokeListener.keyPressStub = [.downArrowKey, .upArrowKey]
 
@@ -132,14 +133,5 @@ struct SingleChoicePromptTests {
         """
         Prompted the user to select a single choice option for the question '\(question.formatted(theme: theme, terminal: terminal))'
         """])
-    }
-}
-
-
-struct FakeLogger: Logger {
-    let logs: [String]
-    
-    func captureMessage(message: String) {
-        logs.append(message)
     }
 }

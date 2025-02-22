@@ -68,6 +68,7 @@ public protocol Noorable {
     ///   - options: The options to show to the user.
     ///   - description: Use it to add some explanation to what the question is for.
     ///   - collapseOnSelection: Whether the prompt should collapse after the user selects an option.
+    ///   - logger: Use it to get debug logs.
     /// - Returns: The option selected by the user.
     func singleChoicePrompt<T: CaseIterable & CustomStringConvertible & Equatable>(
         title: TerminalText?,
@@ -118,12 +119,14 @@ public protocol Noorable {
     ///   - prompt: The prompt message.
     ///   - description: An optional description to clarify what the prompt is for.
     ///   - collapseOnSelection: Whether the prompt should be collasped on answered.
+    ///   - logger: Use it to get debug logs.
     /// - Returns: The user's response.
     func textPrompt(
         title: TerminalText?,
         prompt: TerminalText,
         description: TerminalText?,
-        collapseOnAnswer: Bool
+        collapseOnAnswer: Bool,
+        logger: Logger?
     ) -> String
 
     /// It shows a success alert.
@@ -147,7 +150,8 @@ public protocol Noorable {
     /// It shows a warning alert.
     /// - Parameters:
     ///   - alerts: The warning messages.
-    func warning(_ alerts: [WarningAlert])
+    ///   - logger: Use it to get debug logs.
+    func warning(_ alerts: [WarningAlert], logger: Logger?)
 
     /// Shows a progress step.
     /// - Parameters:
@@ -155,6 +159,7 @@ public protocol Noorable {
     ///   - successMessage: The message that the step gets updated to when the action completes.
     ///   - errorMessage: The message that the step gets updated to when the action errors.
     ///   - showSpinner: True to show a spinner.
+    ///   - logger: Use it to get debug logs.
     ///   - task: The asynchronous task to run. The caller can use the argument that the function takes to update the step
     /// message.
     func progressStep(
@@ -162,6 +167,7 @@ public protocol Noorable {
         successMessage: String?,
         errorMessage: String?,
         showSpinner: Bool,
+        logger: Logger?,
         task: @escaping ((String) -> Void) async throws -> Void
     ) async throws
 
@@ -172,12 +178,14 @@ public protocol Noorable {
     ///   - successMessage: A message that's shown on success.
     ///   - errorMessage: A message that's shown on completion
     ///   - visibleLines: The number of lines to show from the underlying task.
+    ///   - logger: Use it to get debug logs.
     ///   - task: The task to run.
     func collapsibleStep(
         title: TerminalText,
         successMessage: TerminalText?,
         errorMessage: TerminalText?,
         visibleLines: UInt,
+        logger: Logger?,
         task: @escaping (@escaping (TerminalText) -> Void) async throws -> Void
     ) async throws
 }
@@ -236,10 +244,10 @@ public class Noora: Noorable {
             collapseOnSelection: collapseOnSelection,
             renderer: Renderer(),
             standardPipelines: standardPipelines,
-            keyStrokeListener: KeyStrokeListener()
+            keyStrokeListener: KeyStrokeListener(),
             logger: logger
         )
-        logger?.trace("Prompted the user to select a single choice option for the question '\(question.formatted(theme: theme, terminal: terminal))'")
+        logger?.trace("Prompted the user to select a single choice option for the question '\(question.formatted(theme: self.theme, terminal: self.terminal))'")
         return component.run()
     }
 
@@ -272,7 +280,7 @@ public class Noora: Noorable {
         collapseOnSelection: Bool,
         logger: Logger?
     ) -> Bool {
-        logger?.trace("Prompted the user to select a YesOrNo choice for the question '\(question.formatted(theme: theme, terminal: terminal))'")
+        logger?.trace("Prompted the user to select a YesOrNo choice for the question '\(question.formatted(theme: self.theme, terminal: self.terminal))'")
         
         return YesOrNoChoicePrompt(
             title: title,
@@ -290,7 +298,7 @@ public class Noora: Noorable {
     }
 
     public func success(_ alert: SuccessAlert, logger: Logger?) {
-        logger?.notice("Prompted a success alert with message '\(alert.message.formatted(theme: theme, terminal: terminal))' with nextSteps")
+        logger?.notice("Prompted a success alert with message '\(alert.message.formatted(theme: self.theme, terminal: self.terminal))' with nextSteps")
         return Alert(
             item: .success(alert.message, nextSteps: alert.nextSteps),
             standardPipelines: standardPipelines,
@@ -301,7 +309,7 @@ public class Noora: Noorable {
     }
 
     public func error(_ alert: ErrorAlert, logger: Logger?) {
-        logger?.error("Prompted an error alert with message '\(alert.message.formatted(theme: theme, terminal: terminal))' with nextSteps")
+        logger?.error("Prompted an error alert with message '\(alert.message.formatted(theme: self.theme, terminal: self.terminal))' with nextSteps")
         return Alert(
             item: .error(alert.message, nextSteps: alert.nextSteps),
             standardPipelines: standardPipelines,
@@ -314,13 +322,13 @@ public class Noora: Noorable {
     public func warning(_ alerts: WarningAlert..., logger: Logger?) {
             if let logger {
               _ = alerts.map {
-                logger.info("Prompted a warning alert with message '\($0.message.formatted(theme: theme, terminal: terminal))' with nextSteps")
+                logger.info("Prompted a warning alert with message '\($0.message.formatted(theme: self.theme, terminal: self.terminal))' with nextSteps")
             }
         }
-        warning(alerts)
+        warning(alerts, logger: logger)
     }
 
-    public func warning(_ alerts: [WarningAlert]) {
+    public func warning(_ alerts: [WarningAlert], logger: Logger?) {
         Alert(
             item: .warning(alerts.map { (message: $0.message, nextStep: $0.nextStep) }),
             standardPipelines: standardPipelines,
@@ -335,6 +343,7 @@ public class Noora: Noorable {
         successMessage: String?,
         errorMessage: String?,
         showSpinner: Bool,
+        logger: Logger?,
         task: @escaping ((String) -> Void) async throws -> Void
     ) async throws {
         let progressStep = ProgressStep(
@@ -346,7 +355,8 @@ public class Noora: Noorable {
             theme: theme,
             terminal: terminal,
             renderer: Renderer(),
-            standardPipelines: standardPipelines
+            standardPipelines: standardPipelines,
+            logger: logger
         )
         try await progressStep.run()
     }
@@ -356,6 +366,7 @@ public class Noora: Noorable {
         successMessage: TerminalText?,
         errorMessage: TerminalText?,
         visibleLines: UInt,
+        logger: Logger?,
         task: @escaping (@escaping (TerminalText) -> Void) async throws -> Void
     ) async throws {
         try await CollapsibleStep(
@@ -367,7 +378,8 @@ public class Noora: Noorable {
             theme: theme,
             terminal: terminal,
             renderer: Renderer(),
-            standardPipelines: StandardPipelines()
+            standardPipelines: StandardPipelines(),
+            logger: logger
         ).run()
     }
 }
@@ -378,14 +390,16 @@ extension Noorable {
         question: TerminalText,
         options: [T],
         description: TerminalText? = nil,
-        collapseOnSelection: Bool = true
+        collapseOnSelection: Bool = true,
+        logger: Logger?
     ) -> T {
         singleChoicePrompt(
             title: title,
             question: question,
             options: options,
             description: description,
-            collapseOnSelection: collapseOnSelection
+            collapseOnSelection: collapseOnSelection,
+            logger: logger
         )
     }
 
@@ -393,13 +407,15 @@ extension Noorable {
         title: TerminalText? = nil,
         question: TerminalText,
         description: TerminalText? = nil,
-        collapseOnSelection: Bool = true
+        collapseOnSelection: Bool = true,
+        logger: Logger?
     ) -> T {
         singleChoicePrompt(
             title: title,
             question: question,
             description: description,
-            collapseOnSelection: collapseOnSelection
+            collapseOnSelection: collapseOnSelection,
+            logger: logger
         )
     }
 
@@ -408,14 +424,16 @@ extension Noorable {
         question: TerminalText,
         defaultAnswer: Bool = true,
         description: TerminalText? = nil,
-        collapseOnSelection: Bool = true
+        collapseOnSelection: Bool = true,
+        logger: Logger?
     ) -> Bool {
         yesOrNoChoicePrompt(
             title: title,
             question: question,
             defaultAnswer: defaultAnswer,
             description: description,
-            collapseOnSelection: collapseOnSelection
+            collapseOnSelection: collapseOnSelection,
+            logger: logger
         )
     }
 
@@ -423,16 +441,19 @@ extension Noorable {
         title: TerminalText? = nil,
         prompt: TerminalText,
         description: TerminalText? = nil,
-        collapseOnAnswer: Bool = true
+        collapseOnAnswer: Bool = true,
+        logger: Logger?
     ) -> String {
         textPrompt(
             title: title, prompt: prompt, description: description,
-            collapseOnAnswer: collapseOnAnswer
+            collapseOnAnswer: collapseOnAnswer,
+            logger: logger
         )
     }
 
     public func progressStep(
         message: String,
+        logger: Logger?,
         task: @escaping ((String) -> Void) async throws -> Void
     ) async throws {
         try await progressStep(
@@ -440,12 +461,14 @@ extension Noorable {
             successMessage: nil,
             errorMessage: nil,
             showSpinner: true,
+            logger: logger,
             task: task
         )
     }
 
     public func collapsibleStep(
         title: TerminalText,
+        logger: Logger?,
         task: @escaping (@escaping (TerminalText) -> Void) async throws -> Void
     ) async throws {
         try await collapsibleStep(
@@ -453,6 +476,7 @@ extension Noorable {
             successMessage: nil,
             errorMessage: nil,
             visibleLines: 3,
+            logger: logger,
             task: task
         )
     }

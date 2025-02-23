@@ -9,14 +9,18 @@ import Foundation
 public protocol Terminaling {
     var isInteractive: Bool { get }
     var isColored: Bool { get }
+    var size: (rows: Int, columns: Int)? { get }
     func withoutCursor(_ body: () throws -> Void) rethrows
     func inRawMode(_ body: @escaping () throws -> Void) rethrows
     func readCharacter() -> Character?
+    func readCharacterNonBlocking() -> Character?
 }
 
 public struct Terminal: Terminaling {
     public let isInteractive: Bool
     public let isColored: Bool
+
+    public var size: (rows: Int, columns: Int)? { Terminal.size() }
 
     public init(isInteractive: Bool = Terminal.isInteractive(), isColored: Bool = Terminal.isColored()) {
         self.isInteractive = isInteractive
@@ -86,6 +90,25 @@ public struct Terminal: Terminaling {
         return char != EOF ? Character(UnicodeScalar(UInt8(char))) : nil
     }
 
+    public func readCharacterNonBlocking() -> Character? {
+        var term = termios()
+        tcgetattr(fileno(stdin), &term) // Get terminal attributes
+        var original = term
+
+        let flags = fcntl(fileno(stdin), F_GETFL)
+        _ = fcntl(fileno(stdin), F_SETFL, flags | O_NONBLOCK) // Set non-blocking mode
+
+        term.c_lflag &= ~tcflag_t(ECHO | ICANON) // Disable echo & canonical mode
+        tcsetattr(fileno(stdin), TCSANOW, &term) // Apply changes
+
+        let char = getchar() // Read single character
+
+        _ = fcntl(fileno(stdin), F_SETFL, flags)
+        tcsetattr(fileno(stdin), TCSANOW, &original) // Restore original settings
+
+        return char != EOF ? Character(UnicodeScalar(UInt8(char))) : nil
+    }
+
     /// The function returns true when the terminal is interactive and false otherwise.
     public static func isInteractive() -> Bool {
         if ProcessInfo.processInfo.environment["NO_TTY"] != nil {
@@ -103,6 +126,16 @@ public struct Terminal: Terminaling {
             return false
         } else {
             return true
+        }
+    }
+
+    /// Returns the size of the terminal.
+    public static func size() -> (rows: Int, columns: Int)? {
+        var w = winsize()
+        if ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0 {
+            return (Int(w.ws_row), Int(w.ws_col))
+        } else {
+            return nil
         }
     }
 }

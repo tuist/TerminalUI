@@ -14,7 +14,7 @@ struct SingleChoicePromptTests {
     }
 
     let renderer = MockRenderer()
-    let terminal = MockTerminal()
+    let terminal = MockTerminal(size: (rows: 10, columns: 80))
     let keyStrokeListener = MockKeyStrokeListener()
 
     @Test func renders_the_right_content() throws {
@@ -45,7 +45,7 @@ struct SingleChoicePromptTests {
             ❯ option1
               option2
               option3
-          ↑/↓/k/j up/down • enter confirm
+          ↑/↓/k/j up/down • / filter • enter confirm
         """)
         #expect(renders.popLast() == """
         ◉ Integration
@@ -54,7 +54,7 @@ struct SingleChoicePromptTests {
               option1
             ❯ option2
               option3
-          ↑/↓/k/j up/down • enter confirm
+          ↑/↓/k/j up/down • / filter • enter confirm
         """)
         #expect(renders.popLast() == """
         ◉ Integration
@@ -63,7 +63,7 @@ struct SingleChoicePromptTests {
             ❯ option1
               option2
               option3
-          ↑/↓/k/j up/down • enter confirm
+          ↑/↓/k/j up/down • / filter • enter confirm
         """)
         #expect(renders.popLast() == """
         ✔︎ Integration: option1 
@@ -96,7 +96,7 @@ struct SingleChoicePromptTests {
           ❯ option1
             option2
             option3
-        ↑/↓/k/j up/down • enter confirm
+        ↑/↓/k/j up/down • / filter • enter confirm
         """)
         #expect(renders.popLast() == """
         How would you like to integrate Tuist?
@@ -104,7 +104,7 @@ struct SingleChoicePromptTests {
             option1
           ❯ option2
             option3
-        ↑/↓/k/j up/down • enter confirm
+        ↑/↓/k/j up/down • / filter • enter confirm
         """)
         #expect(renders.popLast() == """
         How would you like to integrate Tuist?
@@ -112,10 +112,132 @@ struct SingleChoicePromptTests {
           ❯ option1
             option2
             option3
-        ↑/↓/k/j up/down • enter confirm
+        ↑/↓/k/j up/down • / filter • enter confirm
         """)
         #expect(renders.popLast() == """
         ✔︎ How would you like to integrate Tuist?: option1 
+        """)
+    }
+
+    @Test func renders_the_right_content_when_more_options_than_terminal_height() throws {
+        // Given
+        let subject = SingleChoicePrompt(
+            title: nil,
+            question: "How would you like to integrate Tuist?",
+            description: nil,
+            theme: Theme.test(),
+            terminal: terminal,
+            collapseOnSelection: true,
+            renderer: renderer,
+            standardPipelines: StandardPipelines(),
+            keyStrokeListener: keyStrokeListener
+        )
+        keyStrokeListener.keyPressStub = .init(repeating: .downArrowKey, count: 10)
+
+        // When
+        _ = subject.run(options: (1 ... 20).map { "Option \($0)" })
+
+        // Then
+        #expect(renderer.renders[0] == """
+        How would you like to integrate Tuist?
+          ❯ Option 1
+            Option 2
+            Option 3
+            Option 4
+            Option 5
+            Option 6
+            Option 7
+        ↑/↓/k/j up/down • / filter • enter confirm
+        """)
+        #expect(renderer.renders[renderer.renders.count - 2] == """
+        How would you like to integrate Tuist?
+            Option 8
+            Option 9
+            Option 10
+          ❯ Option 11
+            Option 12
+            Option 13
+            Option 14
+        ↑/↓/k/j up/down • / filter • enter confirm
+        """)
+    }
+
+    @Test func renders_the_right_content_when_filtered() throws {
+        // Given
+        let subject = SingleChoicePrompt(
+            title: nil,
+            question: "How would you like to integrate Tuist?",
+            description: nil,
+            theme: Theme.test(),
+            terminal: terminal,
+            collapseOnSelection: true,
+            renderer: renderer,
+            standardPipelines: StandardPipelines(),
+            keyStrokeListener: keyStrokeListener
+        )
+        keyStrokeListener.keyPressStub = [.printable("/"), .printable("l"), .printable("o"), .escape]
+
+        // When
+        _ = subject.run(options: [
+            "Lorem",
+            "ipsum",
+            "dolor",
+            "sit",
+            "amet",
+            "consectetur",
+            "adipiscing",
+            "elit",
+        ])
+
+        // Then
+        var renders = renderer.renders
+        #expect(renders.removeFirst() == """
+        How would you like to integrate Tuist?
+          ❯ Lorem
+            ipsum
+            dolor
+            sit
+            amet
+            consectetur
+            adipiscing
+        ↑/↓/k/j up/down • / filter • enter confirm
+        """)
+        #expect(renders.removeFirst() == """
+        How would you like to integrate Tuist?
+        Filter: 
+          ❯ Lorem
+            ipsum
+            dolor
+            sit
+            amet
+            consectetur
+        ↑/↓ up/down • esc clear filter • enter confirm
+        """)
+        #expect(renders.removeFirst() == """
+        How would you like to integrate Tuist?
+        Filter: l
+          ❯ Lorem
+            dolor
+            elit
+        ↑/↓ up/down • esc clear filter • enter confirm
+        """)
+        #expect(renders.removeFirst() == """
+        How would you like to integrate Tuist?
+        Filter: lo
+          ❯ Lorem
+            dolor
+        ↑/↓ up/down • esc clear filter • enter confirm
+        """)
+        #expect(renders.removeFirst() == """
+        How would you like to integrate Tuist?
+          ❯ Lorem
+            ipsum
+            dolor
+            sit
+            amet
+            consectetur
+            adipiscing
+        ↑/↓/k/j up/down • / filter • enter confirm
         """)
     }
 }

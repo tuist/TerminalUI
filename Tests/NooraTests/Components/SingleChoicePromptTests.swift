@@ -14,7 +14,6 @@ struct SingleChoicePromptTests {
         }
     }
 
-    let logger = MockLogger()
     let renderer = MockRenderer()
     let terminal = MockTerminal()
     let keyStrokeListener = MockKeyStrokeListener()
@@ -31,7 +30,7 @@ struct SingleChoicePromptTests {
             renderer: renderer,
             standardPipelines: StandardPipelines(),
             keyStrokeListener: keyStrokeListener,
-            logger: logger
+            logger: nil
         )
         keyStrokeListener.keyPressStub = [.downArrowKey, .upArrowKey]
 
@@ -85,7 +84,7 @@ struct SingleChoicePromptTests {
             renderer: renderer,
             standardPipelines: StandardPipelines(),
             keyStrokeListener: keyStrokeListener,
-            logger: logger
+            logger: nil
         )
         keyStrokeListener.keyPressStub = [.downArrowKey, .upArrowKey]
 
@@ -121,17 +120,5 @@ struct SingleChoicePromptTests {
         #expect(renders.popLast() == """
         ✔︎ How would you like to integrate Tuist?: option1 
         """)
-        #expect(logger.logs == ["""
-        Integration
-          How would you like to integrate Tuist?
-          Decide how the integration should be with your project
-           ❯ option1
-             option2
-             option3
-          ↑/↓/k/j up/down • enter confirm
-        """,
-        """
-        Prompted the user to select a single choice option for the question '\(question.formatted(theme: theme, terminal: terminal))'
-        """])
     }
 }

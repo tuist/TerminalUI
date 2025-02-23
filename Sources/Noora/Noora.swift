@@ -193,7 +193,8 @@ public class Noora: Noorable {
         question: TerminalText,
         options: [T],
         description: TerminalText?,
-        collapseOnSelection: Bool
+        collapseOnSelection: Bool,
+        filterMode: SingleChoicePromptFilterMode
     ) -> T where T: CustomStringConvertible, T: Equatable {
         let component = SingleChoicePrompt(
             title: title,
@@ -202,6 +203,7 @@ public class Noora: Noorable {
             theme: theme,
             terminal: terminal,
             collapseOnSelection: collapseOnSelection,
+            filterMode: filterMode,
             renderer: Renderer(),
             standardPipelines: StandardPipelines(),
             keyStrokeListener: KeyStrokeListener()
@@ -213,7 +215,8 @@ public class Noora: Noorable {
         title: TerminalText? = nil,
         question: TerminalText,
         description: TerminalText? = nil,
-        collapseOnSelection: Bool = true
+        collapseOnSelection: Bool = true,
+        filterMode: SingleChoicePromptFilterMode = .disabled
     ) -> T {
         let component = SingleChoicePrompt(
             title: title,
@@ -222,6 +225,7 @@ public class Noora: Noorable {
             theme: theme,
             terminal: terminal,
             collapseOnSelection: collapseOnSelection,
+            filterMode: filterMode,
             renderer: Renderer(),
             standardPipelines: standardPipelines,
             keyStrokeListener: KeyStrokeListener()

@@ -1,4 +1,5 @@
 import Testing
+import os
 
 @testable import Noora
 
@@ -28,7 +29,8 @@ struct SingleChoicePromptTests {
             collapseOnSelection: true,
             renderer: renderer,
             standardPipelines: StandardPipelines(),
-            keyStrokeListener: keyStrokeListener
+            keyStrokeListener: keyStrokeListener,
+            logger: nil
         )
         keyStrokeListener.keyPressStub = [.downArrowKey, .upArrowKey]
 
@@ -81,7 +83,8 @@ struct SingleChoicePromptTests {
             collapseOnSelection: true,
             renderer: renderer,
             standardPipelines: StandardPipelines(),
-            keyStrokeListener: keyStrokeListener
+            keyStrokeListener: keyStrokeListener,
+            logger: nil
         )
         keyStrokeListener.keyPressStub = [.downArrowKey, .upArrowKey]
 

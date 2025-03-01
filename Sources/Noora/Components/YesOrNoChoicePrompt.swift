@@ -103,7 +103,7 @@ struct YesOrNoChoicePrompt {
             }
         }
 
-        logger?.trace("rendered options '\(yes) / \(no)' for '\(question.formatted(theme: theme, terminal: terminal))'")
+        logger?.trace("Prompted the user '\(question.formatted(theme: theme, terminal: terminal))'")
         content += "\n  \(question.formatted(theme: theme, terminal: terminal)) \(yes) / \(no)"
         if let description {
             content +=

@@ -1,4 +1,5 @@
 import Foundation
+import Logging
 import Rainbow
 
 public enum SingleChoicePromptFilterMode {
@@ -24,6 +25,7 @@ struct SingleChoicePrompt {
     let renderer: Rendering
     let standardPipelines: StandardPipelines
     let keyStrokeListener: KeyStrokeListening
+    let logger: Logger?
 
     func run<T: CustomStringConvertible & Equatable>(options: [T]) -> T {
         run(options: options.map { ($0, $0.description) })
@@ -119,6 +121,7 @@ struct SingleChoicePrompt {
             renderResult(selectedOption: selectedOption)
         }
 
+        logger?.info("Option '\(selectedOption.1) selected for the question '\(question.formatted(theme: theme, terminal: terminal))")
         return selectedOption.0
     }
 
@@ -236,6 +239,7 @@ struct SingleChoicePrompt {
         // Render
 
         let content = "\(header)\n\(questions)\(footer)"
+        logger?.info("Rendered options '\(questions)' for '\(question.formatted(theme: theme, terminal: terminal))'")
         renderer.render(content, standardPipeline: standardPipelines.output)
     }
 }

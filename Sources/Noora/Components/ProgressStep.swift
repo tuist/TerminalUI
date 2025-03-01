@@ -1,4 +1,5 @@
 import Foundation
+import Logging
 import Rainbow
 
 struct ProgressStep {
@@ -14,6 +15,7 @@ struct ProgressStep {
     let renderer: Rendering
     let standardPipelines: StandardPipelines
     let spinner: Spinning
+    let logger: Logger?
 
     init(
         message: String,
@@ -25,7 +27,8 @@ struct ProgressStep {
         terminal: Terminaling,
         renderer: Rendering,
         standardPipelines: StandardPipelines,
-        spinner: Spinning = Spinner()
+        spinner: Spinning = Spinner(),
+        logger: Logger?
     ) {
         self.message = message
         self.successMessage = successMessage
@@ -37,6 +40,7 @@ struct ProgressStep {
         self.renderer = renderer
         self.standardPipelines = standardPipelines
         self.spinner = spinner
+        self.logger = logger
     }
 
     func run() async throws {
@@ -52,6 +56,7 @@ struct ProgressStep {
 
         do {
             standardPipelines.output.write(content: "\("ℹ︎".hexIfColoredTerminal(theme.primary, terminal)) \(message)\n")
+            logger?.trace("Non-interactive progress message is \(message)")
 
             try await task { progressMessage in
                 standardPipelines.output
@@ -66,11 +71,13 @@ struct ProgressStep {
                     terminal: terminal
                 )
             standardPipelines.output.write(content: "   \(message)\n")
+            logger?.info("Non-interactive success message is \(successMessage ?? message)")
         } catch {
             standardPipelines.error
                 .write(
                     content: "    \("⨯".hexIfColoredTerminal(theme.danger, terminal)) \((errorMessage ?? message).hexIfColoredTerminal(theme.muted, terminal)) \(timeString(start: start))\n"
                 )
+            logger?.error("Non interactive error message is \(errorMessage ?? message)")
             throw error
         }
     }
@@ -96,6 +103,7 @@ struct ProgressStep {
 
         do {
             render(message: lastMessage, icon: spinnerIcon ?? "ℹ︎")
+            logger?.trace("Interactive progress message is \(lastMessage)")
             try await task { progressMessage in
                 lastMessage = progressMessage
                 render(message: lastMessage, icon: spinnerIcon ?? "ℹ︎")
@@ -110,6 +118,7 @@ struct ProgressStep {
                     ),
                 standardPipeline: standardPipelines.output
             )
+            logger?.info("Interactive progress success message is \(successMessage ?? message)")
         } catch {
             renderer.render(
                 ProgressStep.errorMessage(
@@ -120,6 +129,7 @@ struct ProgressStep {
                 ),
                 standardPipeline: standardPipelines.error
             )
+            logger?.error("Interactive error message is \(errorMessage ?? message)")
             throw error
         }
     }

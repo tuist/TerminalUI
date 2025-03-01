@@ -1,4 +1,5 @@
 import Foundation
+import Logging
 import Rainbow
 
 struct TextPrompt {
@@ -10,9 +11,11 @@ struct TextPrompt {
     let collapseOnAnswer: Bool
     let renderer: Rendering
     let standardPipelines: StandardPipelines
+    let logger: Logger?
 
     func run() -> String {
         if !terminal.isInteractive {
+            logger?.error("\(prompt) was attempted to prompt in a non-interactive session")
             fatalError("'\(prompt)' can't be prompted in a non-interactive session.")
         }
 
@@ -58,6 +61,7 @@ struct TextPrompt {
         }
 
         renderer.render(content, standardPipeline: standardPipelines.output)
+        logger?.trace("A text prompt shown with content '\(content)' \(withCursor ? "with cursor": " without cursor")")
     }
 
     private func renderResult(input: String) {
@@ -68,10 +72,12 @@ struct TextPrompt {
             "\(prompt.formatted(theme: theme, terminal: terminal)):".hexIfColoredTerminal(theme.primary, terminal)
                 .boldIfColoredTerminal(terminal)
         }
+        logger?.trace("A text prompt with content '\(content)' got input  \(input) selected")
         content += " \(input)"
         renderer.render(
             ProgressStep.completionMessage(content, theme: theme, terminal: terminal),
             standardPipeline: standardPipelines.output
         )
+        logger?.info("A text prompt completion message is \(ProgressStep.completionMessage(content, theme: theme, terminal: terminal))")
     }
 }
